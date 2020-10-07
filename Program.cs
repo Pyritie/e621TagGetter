@@ -15,6 +15,10 @@ namespace e621TagGetter
 	/// </summary>
 	public sealed class Program
 	{
+		private const int c_waitTime = 2000; // milliseconds between api requests
+		private const int c_tagsPerPage = 1000; // 1000 is the maximum
+		private static readonly int[] s_categories = { 0, 4, 5 };
+
 		public static void Main(string[] _)
 		{
 			var allTags = GetTags();
@@ -31,21 +35,19 @@ namespace e621TagGetter
 				BaseAddress = new Uri("https://e621.net/")
 			};
 			client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+			// custom user agent required by API
 			client.DefaultRequestHeaders.UserAgent.ParseAdd("TagGetter/0.1 (by Pyritie)");
 
 
 			var allTags = new List<Tag>();
-			int[] categories = new int[] { 0, 4, 5 };
-			int limit = 1000;
-
-			foreach (int category in categories)
+			foreach (int category in s_categories)
 			{
 				int page = 0;
 				while (true)
 				{
 					Console.WriteLine($"Getting page {page} of category {CategoryName(category)}...");
 
-					var response = client.GetAsync($"tags.json?limit={limit}&page={page++}&search[category]={category}&search[hide_empty]=true").Result;
+					var response = client.GetAsync($"tags.json?limit={c_tagsPerPage}&page={page++}&search[category]={category}&search[hide_empty]=true").Result;
 					if (response.IsSuccessStatusCode)
 					{
 						string json = response.Content.ReadAsStringAsync().Result;
@@ -63,9 +65,9 @@ namespace e621TagGetter
 					}
 
 					// wait a bit bitween requests
-					Thread.Sleep(2000);
+					Thread.Sleep(c_waitTime);
 				}
-				Thread.Sleep(2000);
+				Thread.Sleep(c_waitTime);
 			}
 
 			return allTags;
@@ -73,12 +75,10 @@ namespace e621TagGetter
 
 		private static void WriteTagCategoryFiles(IEnumerable<Tag> allTags)
 		{
-			var groups = allTags.GroupBy(t => t.category);
-			foreach (var group in groups)
+			foreach (var group in allTags.GroupBy(t => t.category))
 			{
-				string catName = CategoryName(group.Key);
-
-				File.WriteAllText($"{catName}.txt", string.Join('\n', group.OrderByDescending(t => t.post_count).Select(t => t.name.Replace('_', ' '))));
+				File.WriteAllText(CategoryName(group.Key) + "Tags.txt", 
+					string.Join('\n', group.OrderByDescending(t => t.post_count).Select(t => t.name.Replace('_', ' '))));
 			}
 		}
 
