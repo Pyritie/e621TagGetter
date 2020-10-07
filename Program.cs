@@ -78,7 +78,7 @@ namespace e621TagGetter
 			{
 				string catName = CategoryName(group.Key);
 
-				File.WriteAllText($"{catName}.txt", string.Join('\n', group.OrderByDescending(t => t.post_count).Select(t => t.name)));
+				File.WriteAllText($"{catName}.txt", string.Join('\n', group.OrderByDescending(t => t.post_count).Select(t => t.name.Replace('_', ' '))));
 			}
 		}
 
